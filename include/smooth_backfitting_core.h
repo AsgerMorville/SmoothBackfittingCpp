@@ -13,6 +13,7 @@
 
 typedef Eigen::VectorXd Vector;
 typedef Eigen::ArrayXXd Array;
+typedef Eigen::MatrixXd Matrix;
 
 double epan(double x){
     if (std::abs(x) < 1){
@@ -31,6 +32,15 @@ double trapz(Vector vector, double dx){
     // This function should
     size_t n = vector.size();
     return (2*vector.sum()-vector[0] - vector[n-1])*dx/2.0;
+}
+
+Array createGrid(Vector &xMin, Vector &xMax, int M) {
+    size_t d = xMin.size();
+    Array grid = Array::Zero(M,d);
+    for (int j = 0; j < d; j++) {
+        grid.col(j) = Vector::LinSpaced(M, xMin(j), xMax(j));
+    }
+    return grid;
 }
 
 Vector hInitialize(Array &xTranslated){
@@ -59,31 +69,86 @@ Vector hInitialize(Array &xTranslated){
     return h;
 };
 
-std::vector<Array> generateKhTable(Vector &xGrid, Array &xTranslated, Vector &h, double dx){
+std::vector<Matrix> generateKhTable(Vector &xGrid, Array &xTranslated, Vector &h, double dx){
     size_t M = xGrid.size();
     size_t d = xTranslated.cols();
     size_t n = xTranslated.rows();
-    std::vector<Array> khTable;
+    std::vector<Matrix> khTable;
     //khTable.reserve(d);
     for (int j = 0; j < d; j++){
         double hj = h[j];
         // Construct M,n matrix
-        Array mat1 = Array::Zero(M,n);
+        Matrix mat1 = Matrix::Zero(M,n);
         for (int i = 0; i < n; i++){
             for (int l=0; l < M; l++){
                 mat1(l,i) = kern(xGrid(l)-xTranslated(i,j),hj);
             }
             // Make sure that it integrates to one
             mat1.col(i) /= trapz(mat1.col(i),dx);
-
         }
-        std::cout << "mat1: " << mat1 << "\n";
         khTable.push_back(mat1);
     }
     return khTable;
 }
 
-Vector SBF(Vector &Y, Array &X){
+Array generatePHatTable(std::vector<Matrix> khTable){
+    size_t M = khTable[0].rows();
+    size_t d = khTable.size();
+    Array output = Array::Zero(M,d);
+    for (int j=0; j < d; j++){
+        for (int l=0; l < M; l++){
+            output(l,j) = khTable[j].row(l).mean();
+        }
+    }
+    return output;
+}
+
+std::vector<Matrix> generatePHatTable2(std::vector<Matrix> khTable){
+    size_t n = khTable[0].cols();
+    size_t d = khTable.size();
+    std::vector<Matrix> output;
+    for (int i=0; i<d; i++){
+        for (int j=0; j<d; j++){
+            Matrix prod = khTable[i]*khTable[j].transpose()/n;
+            output.push_back(prod);
+        }
+    }
+    return output;
+}
+
+Array generateFHatTable(Vector yCentered, std::vector<Matrix> khTable, Array pHatTable){
+    size_t M = khTable[0].rows();
+    size_t n = khTable[0].cols();
+    size_t d = khTable.size();
+    Array output = Array::Zero(M,d);
+    for (int j=0; j<d; j++){
+        for (int l=0; l<M; l++){
+            output(l,j) = yCentered.dot(khTable[j].row(l))/n;
+        }
+    }
+    output /= pHatTable;
+    return output;
+}
+
+bool checkConv(Matrix &mHat, Matrix &mOld){
+    size_t d = mHat.cols();
+    double eps = 0.0001;
+    for (int j=0; j<d; j++){
+        if ((mHat.col(j)-mOld.col(j)).squaredNorm() / ((mOld.col(j)).squaredNorm()+eps) > eps){
+            return false;
+        }
+    }
+    return true;
+}
+/*
+def checkconv2(m_old,m_new,d):
+for j in range(d):
+if np.sum(np.power(m_old[:,j]-m_new[:,j],2))/(np.sum(np.power(m_old[:,j],2))+0.0001) > 0.0001:
+return False
+return True
+ */
+
+AddFunction SBF(Vector &Y, Array &X){
     // Initialize parameters. M is number of gridpoints.
     size_t M = 100;
     size_t n = X.rows();
@@ -93,27 +158,55 @@ Vector SBF(Vector &Y, Array &X){
     double yMean = Y.mean();
     Vector yCentered = Y.array()-yMean;
     Vector xGrid = Vector::LinSpaced(M, 0, 1);
-    Array xMinValues = X.colwise().minCoeff();
-    Array xMaxValues = X.colwise().maxCoeff();
+    Vector xMinValues = X.colwise().minCoeff();
+    Vector xMaxValues = X.colwise().maxCoeff();
     Array xTranslated = Array::Zero(n,d);
     for (int j = 0; j < d; j++){
         xTranslated.col(j) = (X.col(j) - xMinValues(j))/(xMaxValues(j)-xMinValues(j));
     }
 
-    Array mHat = Array::Zero(M,d);
+    Matrix mHat = Matrix::Zero(M,d);
     double dx = 1.0/(M-1.0);
 
     Vector h = hInitialize(xTranslated);
-    std::vector<Array> khTable = generateKhTable(xGrid, xTranslated, h, dx);
+    std::vector<Matrix> khTable = generateKhTable(xGrid, xTranslated, h, dx);
+    Array pHatTable = generatePHatTable(khTable);
+    std::vector<Matrix> pHatTable2 = generatePHatTable2(khTable);
+    Array fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
 
-
-
-
-    std::cout << "h values: \n" << h << "\n";
-
-
-   return Y;
+    // Optimization loop
+    for (int B = 0; B < maxIter; B++){
+        Matrix mOld = mHat;
+        for (int j = 0; j<d; j++){
+            for (int l = 0; l < M; l++){
+                double integral_sum = 0;
+                for (int k = 0; k < d; k++){
+                    if (k != j){
+                        double acc = mHat.col(k).dot(pHatTable2[j*d+k].row(l));
+                        integral_sum += 2*acc - mHat(0,k)*pHatTable2[d*j+k](l,0)-mHat(M-1,k)*pHatTable2[j*d+k](l,M-1);
+                    }
+                }
+                mHat(l, j) = fHatTable(l, j) - (integral_sum * dx) / (2*pHatTable(l, j));
+            }
+        }
+        if (checkConv(mHat,mOld) == true){
+            break;
+        }
+    }
+    Array fin_x_grid = createGrid(xMinValues, xMaxValues, M);
+    AddFunction output = AddFunction(fin_x_grid,mHat, X, yMean);
+    return output;
 };
+
+
+class sbfFitter{
+public:
+    sbfFitter () = default;
+    AddFunction fit(Vector &Y, Array &X){
+        return SBF(Y,X);
+    }
+};
+
 
 
 /*

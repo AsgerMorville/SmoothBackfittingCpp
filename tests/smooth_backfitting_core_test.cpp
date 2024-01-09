@@ -6,6 +6,7 @@
 #include "smooth_backfitting_core.h"
 typedef Eigen::ArrayXXd Array;
 typedef Eigen::VectorXd Vector;
+typedef Eigen::MatrixXd Matrix;
 
 int main(){
     int n = 10;
@@ -37,11 +38,19 @@ int main(){
     std::cout << "TRUE predict: " << "2.1644, 1.2413, 2.1312" << "\n";
      */
 
-    Vector test = SBF(Y,X);
-
+    AddFunction test = SBF(Y,X);
+    Array input_point2(1,d);
+    input_point2 << 0.2, 0.5;
+    std::cout << "predict: " << test.predict(input_point2) << "\n";
+    std::cout << "x evals: " << test.xEvaluations() << "\n";
+    //std::cout << X*X.transpose();
     //Array sdtest(4,2);
     //sdtest << 0.2856,  0.8851, -0.7544,  1.2529, 0.5129, -0.2981, 0.4885, -0.0756;
     //std::cout << "input \n" <<  sdtest << "\n";
     //std::cout << "hinit test \n" <<  hInitialize(sdtest) << "\n";
+
+    sbfFitter testfitt;
+    AddFunction test2 = testfitt.fit(Y,X);
+    std::cout << "objectification: " << test2.xEvaluations() << "\n";
     return 0;
 };

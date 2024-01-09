@@ -28,6 +28,9 @@ public:
         std::cout << "mdd: " << m_d << "\n";
         return m_m_points;
     };
+    Array xEvaluations(){
+        return predict(m_X_i);
+    }
     /**
      * Evaluates the d-dimensional additive function at the input point
      * @param x-coordinates of the location where f is to be evaluated
