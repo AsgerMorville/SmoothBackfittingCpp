@@ -47,8 +47,6 @@ Vector hInitialize(Array &xTranslated){
     std::vector<double> quantileList{0.25,0.75};
     //Vector stdDev = (xTranslated.rowwise()-xTranslated.colwise().mean()).colwise().norm();
     Vector stdDev = sqrt(((xTranslated.rowwise()-xTranslated.colwise().mean()).square()).colwise().mean());
-    std::cout << "xtranslated: " << xTranslated << "\n";
-    std::cout << "stdDev: " << stdDev << "\n";
     size_t n = xTranslated.rows();
     size_t d = xTranslated.cols();
     Vector h = Vector::Zero(d);
@@ -140,13 +138,6 @@ bool checkConv(Matrix &mHat, Matrix &mOld){
     }
     return true;
 }
-/*
-def checkconv2(m_old,m_new,d):
-for j in range(d):
-if np.sum(np.power(m_old[:,j]-m_new[:,j],2))/(np.sum(np.power(m_old[:,j],2))+0.0001) > 0.0001:
-return False
-return True
- */
 
 AddFunction SBF(Vector &Y, Array &X){
     // Initialize parameters. M is number of gridpoints.
@@ -189,15 +180,29 @@ AddFunction SBF(Vector &Y, Array &X){
                 mHat(l, j) = fHatTable(l, j) - (integral_sum * dx) / (2*pHatTable(l, j));
             }
         }
-        if (checkConv(mHat,mOld) == true){
+        if (checkConv(mHat, mOld)){
             break;
         }
     }
     Array fin_x_grid = createGrid(xMinValues, xMaxValues, M);
-    AddFunction output = AddFunction(fin_x_grid,mHat, X, yMean);
+    AddFunction output = AddFunction(fin_x_grid,mHat, yMean);
     return output;
 };
 
+
+void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
+    Eigen::Map<Eigen::VectorXd> yVectorMap(yPtr, n);
+    Eigen::Map<Eigen::ArrayXXd> xArrayMap(xPtr, n, d);
+    Vector yVector = yVectorMap;
+    Array xArray = xArrayMap;
+    AddFunction output = SBF(yVector, xArray);
+    Vector fittedValues = output.predict(xArray);
+    //outputPtr = fittedValues.data();
+    std::copy(fittedValues.data(), fittedValues.data() + fittedValues.size(), outputPtr);
+};
+
+
+/*
 
 class sbfFitter{
 public:
@@ -209,7 +214,7 @@ public:
 
 
 
-/*
+
 Eigen::ArrayXXd SBF_new(Eigen::VectorXd Y, Eigen::ArrayXXd X,const size_t n)
 {
     const size_t M = 100;

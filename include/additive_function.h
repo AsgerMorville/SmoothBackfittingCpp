@@ -17,10 +17,9 @@ private:
     size_t m_d;
     size_t m_m;
     double m_y_mean;
-    Array m_X_i;
 public:
-    AddFunction(Array x_p, Array m_p, Array X_i, double y_mean)
-            : m_x_points(std::move(x_p)), m_m_points(std::move(m_p)), m_X_i(std::move(X_i)), m_y_mean(y_mean) {
+    AddFunction(Array x_p, Array m_p, double y_mean)
+            : m_x_points(std::move(x_p)), m_m_points(std::move(m_p)), m_y_mean(y_mean) {
         m_d = m_x_points.cols();
         m_m = m_x_points.rows();
     }
@@ -28,13 +27,11 @@ public:
         std::cout << "mdd: " << m_d << "\n";
         return m_m_points;
     };
-    Array xEvaluations(){
-        return predict(m_X_i);
-    }
+
     /**
      * Evaluates the d-dimensional additive function at the input point
      * @param x-coordinates of the location where f is to be evaluated
-     * @return value of the additive function
+     * @return value of the additive function at x
      */
     double eval(Vector input){
         double output = 0;
