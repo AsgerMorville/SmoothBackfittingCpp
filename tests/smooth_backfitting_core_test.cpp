@@ -41,7 +41,7 @@ int main(){
     AddFunction test = SBF(Y,X);
     Array input_point2(1,d);
     input_point2 << 0.2, 0.5;
-    std::cout << "predict: " << test.predict(input_point2) << "\n";
+    std::cout << "X_i evals: " << test.predict(X) << "\n";
     //std::cout << "x evals: " << test.xEvaluations() << "\n";
     //std::cout << X*X.transpose();
     //Array sdtest(4,2);
@@ -54,8 +54,10 @@ int main(){
     //std::cout << "objectification: " << test2.predict(X) << "\n";
 
     Vector output = Vector::Zero(n);
+    Array X2 = X.transpose();
     std::cout << "Before FITTING: " << output << "\n";
-    sbfWrapper(Y.data(), X.data(),output.data(), n, d);
+    sbfWrapper(Y.data(), X2.data(),output.data(), n, d);
     std::cout << "AFTER FITTING: " << output << "\n";
     return 0;
+
 };

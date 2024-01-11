@@ -194,9 +194,10 @@ void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::VectorXd> yVectorMap(yPtr, n);
     Eigen::Map<Eigen::ArrayXXd> xArrayMap(xPtr, n, d);
     Vector yVector = yVectorMap;
-    Array xArray1 = xArrayMap;
+    Array xArray = xArrayMap;
     //Vector yVector = yVector.transpose();
-    Array xArray = xArrayMap.transpose();
+    //Array xArray = xArrayMap.transpose();
+    //Array xArray = xArray1;
     std::cout << "y is given by: \n" << yVector << "\n";
     std::cout << "X is given by: \n" << xArray << "\n";
     AddFunction output = SBF(yVector, xArray);
