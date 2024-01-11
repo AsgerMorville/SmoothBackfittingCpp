@@ -195,6 +195,7 @@ void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::ArrayXXd> xArrayMap(xPtr, n, d);
     Vector yVector = yVectorMap;
     Array xArray = xArrayMap;
+    std::cout << "git tree test" << "\n";
     AddFunction output = SBF(yVector, xArray);
     Vector fittedValues = output.predict(xArray);
     //outputPtr = fittedValues.data();
