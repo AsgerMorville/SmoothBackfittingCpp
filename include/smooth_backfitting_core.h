@@ -192,7 +192,7 @@ AddFunction SBF(Vector &Y, Array &X){
 
 void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::VectorXd> yVectorMap(yPtr, n);
-    Eigen::Map<Eigen::ArrayXXd, Eigen::ColMajor> xArrayMap(xPtr, n, d);
+    Eigen::Map<Eigen::Array<double, Eigen::Dynamic, Eigen::RowMajor>> xArrayMap(xPtr, n, d);
     Vector yVector = yVectorMap;
     Array xArray = xArrayMap;
     //Vector yVector = yVector.transpose();
@@ -200,7 +200,7 @@ void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     //Array xArray = xArray1;
     std::cout << "y is given by: \n" << yVector << "\n";
     std::cout << "X is given by: \n" << xArray << "\n";
-    std::cout << "testtxt. rowmjr d equals "<< d << "\n";
+    std::cout << "testtxt. ROWmjr fix d equals "<< d << "\n";
     AddFunction output = SBF(yVector, xArray);
     Vector fittedValues = output.predict(xArray);
     //outputPtr = fittedValues.data();
