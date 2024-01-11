@@ -192,7 +192,7 @@ AddFunction SBF(Vector &Y, Array &X){
 
 void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::VectorXd> yVectorMap(yPtr, n);
-    Eigen::Map<Eigen::Array<double, Eigen::Dynamic, Eigen::RowMajor>> xArrayMap(xPtr, n, d);
+    Eigen::Map<Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> xArrayMap(xPtr, n, d);
     Vector yVector = yVectorMap;
     Array xArray = xArrayMap;
     //Vector yVector = yVector.transpose();
