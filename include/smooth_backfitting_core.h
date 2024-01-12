@@ -10,6 +10,9 @@
 #include "additive_function.h"
 #include "quantile.h"
 #include <numeric>
+#include <chrono>
+#include <execution>
+#include <utility>
 
 typedef Eigen::VectorXd Vector;
 typedef Eigen::ArrayXXd Array;
@@ -34,19 +37,19 @@ double trapz(Vector vector, double dx){
     return (2*vector.sum()-vector[0] - vector[n-1])*dx/2.0;
 }
 
-Array createGrid(Vector &xMin, Vector &xMax, int M) {
+Matrix createGrid(Vector &xMin, Vector &xMax, int M) {
     size_t d = xMin.size();
-    Array grid = Array::Zero(M,d);
+    Matrix grid = Matrix::Zero(M,d);
     for (int j = 0; j < d; j++) {
         grid.col(j) = Vector::LinSpaced(M, xMin(j), xMax(j));
     }
     return grid;
 }
 
-Vector hInitialize(Array &xTranslated){
+Vector hInitialize(Matrix &xTranslated){
     std::vector<double> quantileList{0.25,0.75};
     //Vector stdDev = (xTranslated.rowwise()-xTranslated.colwise().mean()).colwise().norm();
-    Vector stdDev = sqrt(((xTranslated.rowwise()-xTranslated.colwise().mean()).square()).colwise().mean());
+    Vector stdDev = sqrt(((xTranslated.rowwise()-xTranslated.colwise().mean()).array().square()).colwise().mean());
     size_t n = xTranslated.rows();
     size_t d = xTranslated.cols();
     Vector h = Vector::Zero(d);
@@ -67,7 +70,7 @@ Vector hInitialize(Array &xTranslated){
     return h;
 };
 
-std::vector<Matrix> generateKhTable(Vector &xGrid, Array &xTranslated, Vector &h, double dx){
+std::vector<Matrix> generateKhTable(Vector &xGrid, Matrix &xTranslated, Vector &h, double dx){
     size_t M = xGrid.size();
     size_t d = xTranslated.cols();
     size_t n = xTranslated.rows();
@@ -89,10 +92,10 @@ std::vector<Matrix> generateKhTable(Vector &xGrid, Array &xTranslated, Vector &h
     return khTable;
 }
 
-Array generatePHatTable(std::vector<Matrix> khTable){
+Matrix generatePHatTable(std::vector<Matrix> khTable){
     size_t M = khTable[0].rows();
     size_t d = khTable.size();
-    Array output = Array::Zero(M,d);
+    Matrix output = Matrix::Zero(M,d);
     for (int j=0; j < d; j++){
         for (int l=0; l < M; l++){
             output(l,j) = khTable[j].row(l).mean();
@@ -104,7 +107,9 @@ Array generatePHatTable(std::vector<Matrix> khTable){
 std::vector<Matrix> generatePHatTable2(std::vector<Matrix> khTable){
     size_t n = khTable[0].cols();
     size_t d = khTable.size();
+    size_t M = khTable[0].rows();
     std::vector<Matrix> output;
+    output.reserve(d*d);
     for (int i=0; i<d; i++){
         for (int j=0; j<d; j++){
             Matrix prod = khTable[i]*khTable[j].transpose()/n;
@@ -114,17 +119,17 @@ std::vector<Matrix> generatePHatTable2(std::vector<Matrix> khTable){
     return output;
 }
 
-Array generateFHatTable(Vector yCentered, std::vector<Matrix> khTable, Array pHatTable){
+Matrix generateFHatTable(Vector yCentered, std::vector<Matrix> khTable, Matrix pHatTable){
     size_t M = khTable[0].rows();
     size_t n = khTable[0].cols();
     size_t d = khTable.size();
-    Array output = Array::Zero(M,d);
+    Matrix output = Matrix::Zero(M,d);
     for (int j=0; j<d; j++){
         for (int l=0; l<M; l++){
             output(l,j) = yCentered.dot(khTable[j].row(l))/n;
         }
     }
-    output /= pHatTable;
+    output.array() /= pHatTable.array();
     return output;
 }
 
@@ -139,7 +144,7 @@ bool checkConv(Matrix &mHat, Matrix &mOld){
     return true;
 }
 
-AddFunction SBF(Vector &Y, Array &X){
+AddFunction SBF(Vector &Y, Matrix &X){
     // Initialize parameters. M is number of gridpoints.
     size_t M = 100;
     size_t n = X.rows();
@@ -151,19 +156,25 @@ AddFunction SBF(Vector &Y, Array &X){
     Vector xGrid = Vector::LinSpaced(M, 0, 1);
     Vector xMinValues = X.colwise().minCoeff();
     Vector xMaxValues = X.colwise().maxCoeff();
-    Array xTranslated = Array::Zero(n,d);
+    Matrix xTranslated = Matrix::Zero(n,d);
     for (int j = 0; j < d; j++){
-        xTranslated.col(j) = (X.col(j) - xMinValues(j))/(xMaxValues(j)-xMinValues(j));
+        xTranslated.col(j) = (X.col(j).array() - xMinValues(j))/(xMaxValues(j)-xMinValues(j));
     }
 
     Matrix mHat = Matrix::Zero(M,d);
     double dx = 1.0/(M-1.0);
 
+    auto t0 = std::chrono::steady_clock::now();
     Vector h = hInitialize(xTranslated);
+    auto t1 = std::chrono::steady_clock::now();
     std::vector<Matrix> khTable = generateKhTable(xGrid, xTranslated, h, dx);
-    Array pHatTable = generatePHatTable(khTable);
+    auto t2 = std::chrono::steady_clock::now();
+    Matrix pHatTable = generatePHatTable(khTable);
+    auto t3 = std::chrono::steady_clock::now();
     std::vector<Matrix> pHatTable2 = generatePHatTable2(khTable);
-    Array fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
+    auto t4 = std::chrono::steady_clock::now();
+    Matrix fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
+    auto t5 = std::chrono::steady_clock::now();
 
     // Optimization loop
     for (int B = 0; B < maxIter; B++){
@@ -184,19 +195,36 @@ AddFunction SBF(Vector &Y, Array &X){
             break;
         }
     }
-    Array fin_x_grid = createGrid(xMinValues, xMaxValues, M);
+
+    Matrix fin_x_grid = createGrid(xMinValues, xMaxValues, M);
     AddFunction output = AddFunction(fin_x_grid,mHat, yMean);
+    /*
+    auto t6 = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> h_init_time = t1-t0;
+    std::chrono::duration<double, std::milli> Kh_init_time = t2-t1;
+    std::chrono::duration<double, std::milli> phat_init_time = t3-t2;
+    std::chrono::duration<double, std::milli> phat2_init_time = t4-t3;
+    std::chrono::duration<double, std::milli> f_hat_init_time = t5-t4;
+    std::chrono::duration<double, std::milli> opt_loop_time = t6-t5;
+
+    std::cout << "h init time: " << h_init_time.count() << " ms" << "\n";
+    std::cout << "Kh init time: " << Kh_init_time.count()<< " ms" << "\n";
+    std::cout << "phat init time: " << phat_init_time.count()<< " ms"  << "\n";
+    std::cout << "phat2 init time: " << phat2_init_time.count()<< " ms" << "\n";
+    std::cout << "fhat init time: " << f_hat_init_time.count()<< " ms"<< "\n";
+    std::cout << "opt loop time: " << opt_loop_time.count()<< " ms"  << "\n";
+     */
     return output;
 };
 
 
 void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::VectorXd> yVectorMap(yPtr, n);
-    Eigen::Map<Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> xArrayMap(xPtr, n, d);
+    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> xMatrixMap(xPtr, n, d);
     Vector yVector = yVectorMap;
-    Array xArray = xArrayMap;
-    AddFunction output = SBF(yVector, xArray);
-    Vector fittedValues = output.predict(xArray);
+    Matrix xMatrix = xMatrixMap;
+    AddFunction output = SBF(yVector, xMatrix);
+    Vector fittedValues = output.predict(xMatrix);
     //outputPtr = fittedValues.data();
     std::copy(fittedValues.data(), fittedValues.data() + fittedValues.size(), outputPtr);
 };

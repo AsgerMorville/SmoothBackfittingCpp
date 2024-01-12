@@ -2,13 +2,27 @@
 // Created by Asger Morville on 2024/01/07.
 //
 #include <iostream>
-#include <Eigen/Dense>
 #include "smooth_backfitting_core.h"
+#include <Eigen/Dense>
+#include <chrono>
 typedef Eigen::ArrayXXd Array;
 typedef Eigen::VectorXd Vector;
 typedef Eigen::MatrixXd Matrix;
 
 int main(){
+    int n = 2000;
+    int d = 20;
+    Matrix X = Matrix::Random(n,d);
+    Vector Y = Vector::Random(n);
+
+    auto t0 = std::chrono::steady_clock::now();
+    AddFunction add_func_test = SBF(Y,X);
+    auto t1 = std::chrono::steady_clock::now();
+
+    //std::cout << add_func_test.predict(X) << "\n";
+    std::chrono::duration<double, std::milli> timee = t1-t0;
+    std::cout << (timee/1000.0).count() << " seconds"  << "\n";
+    /*
     int n = 10;
     int n0 = 5;
     int d = 2;
@@ -28,15 +42,15 @@ int main(){
     input_array << 0.5741, 0.1467, 0.5893, 0.6998, 0.1023, 0.4141;
 
     Y << 2.2683, 1.7119, 1.1314, 1.8573, 2.0992, 2.0611, 2.6933, 2.2075, 2.3477, 1.3244;
-    /*
-    AddFunction add_func_test = SBF(Y,X);
 
-    std::cout << "TESTER eval: " << testerr << "\n";
-    std::cout << "TRUE eval: " << 1.3484 <<"\n";
+    //AddFunction add_func_test = SBF(Y,X);
 
-    std::cout << "TESTER predict: " << tester_array << "\n";
-    std::cout << "TRUE predict: " << "2.1644, 1.2413, 2.1312" << "\n";
-     */
+    //std::cout << "TESTER eval: " << testerr << "\n";
+    //std::cout << "TRUE eval: " << 1.3484 <<"\n";
+
+    //std::cout << "TESTER predict: " << tester_array << "\n";
+    //std::cout << "TRUE predict: " << "2.1644, 1.2413, 2.1312" << "\n";
+
 
     AddFunction test = SBF(Y,X);
     Array input_point2(1,d);
@@ -58,6 +72,6 @@ int main(){
     std::cout << "Before FITTING: " << output << "\n";
     sbfWrapper(Y.data(), X2.data(),output.data(), n, d);
     std::cout << "AFTER FITTING: " << output << "\n";
+    */
     return 0;
-
 };

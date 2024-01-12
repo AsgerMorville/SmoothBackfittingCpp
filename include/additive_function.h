@@ -9,6 +9,7 @@
 
 typedef Eigen::VectorXd Vector;
 typedef Eigen::ArrayXXd Array;
+typedef Eigen::MatrixXd Matrix;
 
 class AddFunction{
 private:
@@ -46,6 +47,15 @@ public:
     }
 
     Vector predict(Array &input){
+        int input_length = input.rows();
+        Vector output(input_length);
+        for (int i = 0; i < input_length; i++){
+            output[i] = eval(input.row(i));
+        }
+        return output;
+    }
+    Vector predict(Matrix &input2){
+        Array input = input2.array();
         int input_length = input.rows();
         Vector output(input_length);
         for (int i = 0; i < input_length; i++){

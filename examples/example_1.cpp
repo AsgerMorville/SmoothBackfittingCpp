@@ -2,7 +2,7 @@
 // Created by Asger Morville on 2024/01/07.
 //
 #include <iostream>
-#include <Eigen/Dense>
+#include "Eigen/Dense"
 #include "smooth_backfitting_core.h"
 #include "additive_function.h"
 
