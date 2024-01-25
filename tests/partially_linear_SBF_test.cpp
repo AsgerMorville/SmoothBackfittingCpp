@@ -23,6 +23,7 @@ int main() {
     Vector Y = Vector::Random(n);
 
 
+    /*
     auto t0 = std::chrono::steady_clock::now();
     Vector fitted = PL_SBF(Y, X, Z);
     auto t1 = std::chrono::steady_clock::now();
@@ -30,4 +31,5 @@ int main() {
     std::chrono::duration<double, std::milli> timee = t1 - t0;
     std::cout << (timee / 1000.0).count() << " seconds" << "\n";
     return 0;
+    */
 }

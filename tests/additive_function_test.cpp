@@ -4,6 +4,7 @@
 #include <iostream>
 #include <Eigen/Dense>
 #include "additive_function.h"
+#include "utils/random_generator.h"
 typedef Eigen::ArrayXXd Array;
 typedef Eigen::VectorXd Vector;
 
@@ -26,8 +27,7 @@ int main(){
     input_array << 0.5741, 0.1467, 0.5893, 0.6998, 0.1023, 0.4141;
 
 
-    AddFunction test_func = AddFunction(X,m,Xi,y_mean);
-    test_func.get_m_points();
+    AddFunction test_func = AddFunction(X,m,y_mean);
     double testerr = test_func.eval(input_point);
     Array tester_array = test_func.predict(input_array);
 
@@ -36,5 +36,7 @@ int main(){
 
     std::cout << "TESTER predict: " << tester_array << "\n";
     std::cout << "TRUE predict: " << "2.1644, 1.2413, 2.1312" << "\n";
+
+
     return 0;
 };

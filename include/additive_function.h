@@ -1,6 +1,10 @@
+// This file is part of SmoothBackfittingCpp, a header file library for smooth backfitting methods in C++
 //
-// Created by Asger Morville on 2024/01/07.
+// Copyright (C) 2023-2024 <asgermorville@gmail.com>
 //
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #ifndef SMOOTH_BACKFITTING_LIBRARY_ADDITIVE_FUNCTION_H
 #define SMOOTH_BACKFITTING_LIBRARY_ADDITIVE_FUNCTION_H
@@ -24,10 +28,6 @@ public:
         m_d = m_x_points.cols();
         m_m = m_x_points.rows();
     }
-    Array get_m_points(){
-        std::cout << "mdd: " << m_d << "\n";
-        return m_m_points;
-    };
 
     /**
      * Evaluates the d-dimensional additive function at the input point
@@ -62,6 +62,20 @@ public:
             output[i] = eval(input.row(i));
         }
         return output;
+    }
+};
+
+
+class PartAddFunction{
+private:
+    AddFunction m_addComponent;
+    Vector m_beta;
+public:
+    PartAddFunction(AddFunction addFunc, Vector &beta) : m_beta(beta), m_addComponent(std::move(addFunc))
+    {}
+
+    Vector predict(Matrix X, Matrix Z){
+        return X*m_beta + m_addComponent.predict(Z);
     }
 };
 

@@ -1,6 +1,10 @@
+// This file is part of SmoothBackfittingCpp, a header file library for smooth backfitting methods in C++
 //
-// Created by Asger Morville on 2024/01/08.
+// Copyright (C) 2023-2024 <asgermorville@gmail.com>
 //
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #ifndef SMOOTH_BACKFITTING_LIBRARY_QUANTILE_H
 #define SMOOTH_BACKFITTING_LIBRARY_QUANTILE_H

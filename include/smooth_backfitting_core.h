@@ -1,6 +1,10 @@
+// This file is part of SmoothBackfittingCpp, a header file library for smooth backfitting methods in C++
 //
-// Created by Asger Morville on 2024/01/07.
+// Copyright (C) 2023-2024 <asgermorville@gmail.com>
 //
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #ifndef SMOOTH_BACKFITTING_LIBRARY_SMOOTH_BACKFITTING_CORE_H
 #define SMOOTH_BACKFITTING_LIBRARY_SMOOTH_BACKFITTING_CORE_H
@@ -8,7 +12,7 @@
 #include <iostream>
 #include <Eigen/Dense>
 #include "additive_function.h"
-#include "quantile.h"
+#include "utils/quantile.h"
 #include <numeric>
 #include <chrono>
 #include <execution>
@@ -48,7 +52,6 @@ Matrix createGrid(Vector &xMin, Vector &xMax, int M) {
 
 Vector hInitialize(Matrix &xTranslated){
     std::vector<double> quantileList{0.25,0.75};
-    //Vector stdDev = (xTranslated.rowwise()-xTranslated.colwise().mean()).colwise().norm();
     Vector stdDev = sqrt(((xTranslated.rowwise()-xTranslated.colwise().mean()).array().square()).colwise().mean());
     size_t n = xTranslated.rows();
     size_t d = xTranslated.cols();
