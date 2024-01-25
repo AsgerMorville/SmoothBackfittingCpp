@@ -8,8 +8,7 @@ include_directories(extern)
 #target_link_directories(ex3 PRIVATE include)
 
 
-add_executable(ex1 examples/example_1.cpp
-        include/utils/random_generator.h)
+add_executable(ex1 examples/example_1.cpp)
 add_executable(ex2 examples/example_2.cpp)
 
 

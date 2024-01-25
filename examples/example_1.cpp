@@ -19,18 +19,8 @@ typedef Eigen::VectorXd Vector;
 typedef Eigen::ArrayXXd Array;
 typedef Eigen::MatrixXd Matrix;
 
-double f_1(double x){
-    return std::sin(x);
-}
-
-double f_2(double x){
-    return std::cos(x);
-}
-
 
 int main(){
-    // Additive function example
-
     // Set random number generation seed
     std::mt19937 mt(1);
 
@@ -45,7 +35,7 @@ int main(){
     Vector noise = stdNormalVector(n, mt);
     Vector Y = Vector::Zero(n);
     for (int i = 0; i < n; i++){
-        Y(i) = f_1(X(i,0)) + f_2(X(i,1)) + noise(i);
+        Y(i) = std::cos(X(i,0)) + std::sin(X(i,1)) + noise(i);
     }
 
     // Obtain smooth backfitting estimates
