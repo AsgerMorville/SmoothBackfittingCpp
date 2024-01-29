@@ -235,6 +235,9 @@ void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     std::cout << "This is X: \n" << xMatrix << "\n";
 
     AddFunction output = SBF(yVector, xMatrix);
+
+    std::cout << "This is the output:\n" << output.predict(xMatrix) << "\n";
+
     Vector fittedValues = output.predict(xMatrix);
 
 
