@@ -54,4 +54,5 @@ static inline std::vector<T> Quantile(const std::vector<T>& inData, const std::v
     return quantiles;
 }
 
+
 #endif //SMOOTH_BACKFITTING_LIBRARY_QUANTILE_H

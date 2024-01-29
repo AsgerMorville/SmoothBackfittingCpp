@@ -10,6 +10,7 @@ typedef Eigen::VectorXd Vector;
 typedef Eigen::MatrixXd Matrix;
 
 int main(){
+    /*
     int n = 2000;
     int d = 20;
     Matrix X = Matrix::Random(n,d);
@@ -22,36 +23,31 @@ int main(){
     //std::cout << add_func_test.predict(X) << "\n";
     std::chrono::duration<double, std::milli> timee = t1-t0;
     std::cout << (timee/1000.0).count() << " seconds"  << "\n";
-    /*
+    */
     int n = 10;
-    int n0 = 5;
     int d = 2;
-    Array X(n,d);
-    Array Xi(n0, d);
+    Matrix X(n,d);
     Array m(n, d);
     Vector input_point(2);
     Array input_array(3,d);
     Vector Y(n);
-    double y_mean = 2.3;
-    X << 0.417, 0.7203, 0.0001, 0.3023, 0.1468, 0.0923, 0.1863, 0.3456, 0.3968, 0.5388, 0.4192, 0.6852,
-            0.2045, 0.8781, 0.0274, 0.6705, 0.4173, 0.5587, 0.1404, 0.1981;
-    Xi << 0.8007, 0.9683, 0.3134, 0.6923, 0.8764, 0.8946, 0.085 , 0.0391, 0.1698, 0.8781;
-    m << -0.1724, -0.8779, 0.0422,  0.5828, -1.1006,  1.1447, 0.9016,  0.5025, 0.9009, -0.6837,
-            -0.1229, -0.9358, -0.2679,  0.5304, -0.6917, -0.3968, -0.6872, -0.8452, -0.6712, -0.0127;
-    input_point << 0.2, 0.5;
-    input_array << 0.5741, 0.1467, 0.5893, 0.6998, 0.1023, 0.4141;
 
-    Y << 2.2683, 1.7119, 1.1314, 1.8573, 2.0992, 2.0611, 2.6933, 2.2075, 2.3477, 1.3244;
-
-    //AddFunction add_func_test = SBF(Y,X);
-
-    //std::cout << "TESTER eval: " << testerr << "\n";
-    //std::cout << "TRUE eval: " << 1.3484 <<"\n";
-
-    //std::cout << "TESTER predict: " << tester_array << "\n";
-    //std::cout << "TRUE predict: " << "2.1644, 1.2413, 2.1312" << "\n";
+    Y << 0.6439, -1.0304, -0.1212, -1.2307, -0.8734, -0.1489, -1.0219,
+            0.1086, -0.8173, -1.3086;
+    X.col(0) << -0.7663,  0.4802, -0.6479,  1.3356, -0.8366,  0.1365,  0.4252, -0.4268,  0.55  ,  0.281;
+    X.col(1) << -0.1501, -0.7642,  0.0367,  0.5074, -0.9581,  0.9965,  0.7849, 0.4374,  0.7842, -0.5952;
 
 
+    AddFunction add_func_test = SBF(Y,X);
+
+    std::cout << "Y: " << Y << "\n";
+    std::cout << "X : " << X << "\n";
+    std::cout << "Xi evaluations: \n" << add_func_test.predict(X) << "\n";
+    // This should print: [ 0.3038 -1.3868  0.2132 -1.2521 -0.7052 -0.4725 -0.7166  0.027  -0.764
+    // -1.2051]
+
+
+    /*
     AddFunction test = SBF(Y,X);
     Array input_point2(1,d);
     input_point2 << 0.2, 0.5;

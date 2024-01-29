@@ -18,6 +18,8 @@
 #include <execution>
 #include <utility>
 
+#define ENABLE_BENCHMARK
+
 typedef Eigen::VectorXd Vector;
 typedef Eigen::ArrayXXd Array;
 typedef Eigen::MatrixXd Matrix;
@@ -149,6 +151,7 @@ bool checkConv(Matrix &mHat, Matrix &mOld){
 
 AddFunction SBF(Vector &Y, Matrix &X){
     // Initialize parameters. M is number of gridpoints.
+    auto t00 = std::chrono::steady_clock::now();
     size_t M = 100;
     size_t n = X.rows();
     size_t maxIter = 20;
@@ -178,7 +181,6 @@ AddFunction SBF(Vector &Y, Matrix &X){
     auto t4 = std::chrono::steady_clock::now();
     Matrix fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
     auto t5 = std::chrono::steady_clock::now();
-
     // Optimization loop
     for (int B = 0; B < maxIter; B++){
         Matrix mOld = mHat;
@@ -201,8 +203,9 @@ AddFunction SBF(Vector &Y, Matrix &X){
 
     Matrix fin_x_grid = createGrid(xMinValues, xMaxValues, M);
     AddFunction output = AddFunction(fin_x_grid,mHat, yMean);
-    /*
+    #ifdef ENABLE_BENCHMARK
     auto t6 = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> x_init_time = t0-t00;
     std::chrono::duration<double, std::milli> h_init_time = t1-t0;
     std::chrono::duration<double, std::milli> Kh_init_time = t2-t1;
     std::chrono::duration<double, std::milli> phat_init_time = t3-t2;
@@ -210,13 +213,14 @@ AddFunction SBF(Vector &Y, Matrix &X){
     std::chrono::duration<double, std::milli> f_hat_init_time = t5-t4;
     std::chrono::duration<double, std::milli> opt_loop_time = t6-t5;
 
+    std::cout << "x init time: " << x_init_time.count() << " ms" << "\n";
     std::cout << "h init time: " << h_init_time.count() << " ms" << "\n";
     std::cout << "Kh init time: " << Kh_init_time.count()<< " ms" << "\n";
     std::cout << "phat init time: " << phat_init_time.count()<< " ms"  << "\n";
     std::cout << "phat2 init time: " << phat2_init_time.count()<< " ms" << "\n";
     std::cout << "fhat init time: " << f_hat_init_time.count()<< " ms"<< "\n";
     std::cout << "opt loop time: " << opt_loop_time.count()<< " ms"  << "\n";
-     */
+    #endif
     return output;
 };
 
@@ -226,8 +230,14 @@ void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> xMatrixMap(xPtr, n, d);
     Vector yVector = yVectorMap;
     Matrix xMatrix = xMatrixMap;
+
+    std::cout << "This is Y: \n" << yVector<< "\n";
+    std::cout << "This is X: \n" << xMatrix << "\n";
+
     AddFunction output = SBF(yVector, xMatrix);
     Vector fittedValues = output.predict(xMatrix);
+
+
     //outputPtr = fittedValues.data();
     std::copy(fittedValues.data(), fittedValues.data() + fittedValues.size(), outputPtr);
 };

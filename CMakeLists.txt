@@ -11,8 +11,11 @@ include_directories(extern)
 add_executable(ex1 examples/example_1.cpp)
 add_executable(ex2 examples/example_2.cpp)
 
-
-add_executable(add_func_test tests/additive_function_test.cpp)
+add_executable(quantile_test tests/quantile_test.cpp)
+add_executable(benchmarking tests/benchmarking.cpp)
+add_executable(add_func_test tests/additive_function_test.cpp
+        tests/benchmarking.cpp
+        tests/quantile_test.cpp)
 add_executable(random_generator_test tests/random_generator_test.cpp)
 add_executable(SBF_test tests/smooth_backfitting_core_test.cpp)
 add_executable(PL_SBF tests/partially_linear_SBF_test.cpp)
