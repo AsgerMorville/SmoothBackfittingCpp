@@ -227,7 +227,7 @@ AddFunction SBF(Vector &Y, Matrix &X){
 
 void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Eigen::Map<Eigen::Vector<double, Eigen::Dynamic>> yVectorMap(yPtr, n);
-    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> xMatrixMap(xPtr, n, d);
+    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> xMatrixMap(xPtr, n, d);
     Vector yVector = yVectorMap;
     Matrix xMatrix = xMatrixMap;
 
