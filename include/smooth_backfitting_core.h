@@ -14,7 +14,6 @@
 #include "additive_function.h"
 #include "utils/quantile.h"
 #include <numeric>
-#include <chrono>
 #include <execution>
 #include <utility>
 
@@ -151,7 +150,6 @@ bool checkConv(Matrix &mHat, Matrix &mOld){
 
 AddFunction SBF(Vector &Y, Matrix &X){
     // Initialize parameters. M is number of gridpoints.
-    auto t00 = std::chrono::steady_clock::now();
     size_t M = 100;
     size_t n = X.rows();
     size_t maxIter = 20;
@@ -170,17 +168,11 @@ AddFunction SBF(Vector &Y, Matrix &X){
     Matrix mHat = Matrix::Zero(M,d);
     double dx = 1.0/(M-1.0);
 
-    auto t0 = std::chrono::steady_clock::now();
     Vector h = hInitialize(xTranslated);
-    auto t1 = std::chrono::steady_clock::now();
     std::vector<Matrix> khTable = generateKhTable(xGrid, xTranslated, h, dx);
-    auto t2 = std::chrono::steady_clock::now();
     Matrix pHatTable = generatePHatTable(khTable);
-    auto t3 = std::chrono::steady_clock::now();
     std::vector<Matrix> pHatTable2 = generatePHatTable2(khTable);
-    auto t4 = std::chrono::steady_clock::now();
     Matrix fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
-    auto t5 = std::chrono::steady_clock::now();
     // Optimization loop
     for (int B = 0; B < maxIter; B++){
         Matrix mOld = mHat;
@@ -203,24 +195,153 @@ AddFunction SBF(Vector &Y, Matrix &X){
 
     Matrix fin_x_grid = createGrid(xMinValues, xMaxValues, M);
     AddFunction output = AddFunction(fin_x_grid,mHat, yMean);
-    #ifdef ENABLE_BENCHMARK
-    auto t6 = std::chrono::steady_clock::now();
-    std::chrono::duration<double, std::milli> x_init_time = t0-t00;
-    std::chrono::duration<double, std::milli> h_init_time = t1-t0;
-    std::chrono::duration<double, std::milli> Kh_init_time = t2-t1;
-    std::chrono::duration<double, std::milli> phat_init_time = t3-t2;
-    std::chrono::duration<double, std::milli> phat2_init_time = t4-t3;
-    std::chrono::duration<double, std::milli> f_hat_init_time = t5-t4;
-    std::chrono::duration<double, std::milli> opt_loop_time = t6-t5;
+    return output;
+};
 
-    std::cout << "x init time: " << x_init_time.count() << " ms" << "\n";
-    std::cout << "h init time: " << h_init_time.count() << " ms" << "\n";
-    std::cout << "Kh init time: " << Kh_init_time.count()<< " ms" << "\n";
-    std::cout << "phat init time: " << phat_init_time.count()<< " ms"  << "\n";
-    std::cout << "phat2 init time: " << phat2_init_time.count()<< " ms" << "\n";
-    std::cout << "fhat init time: " << f_hat_init_time.count()<< " ms"<< "\n";
-    std::cout << "opt loop time: " << opt_loop_time.count()<< " ms"  << "\n";
-    #endif
+void optLoopLasso(Matrix& mHat, Matrix& pHatTable, std::vector<Matrix>& pHatTable2, Matrix& fHatTable, double dx, double lmbda, size_t maxIter, size_t d, size_t M){
+    for (int B=0; B < maxIter; B++){
+        Matrix mOld = mHat;
+        // Optimization loop
+        for (int j=0; j < d; j++){
+            Vector PiMinusJ = Vector::Zero(M);
+            for (int l=0; l < M; l++){
+                double integral_sum = 0;
+                for (int k=0; k < d; k++){
+                    if (k != j){
+                        double acc = mHat.col(k).dot(pHatTable2[j*d+k].row(l));
+                        integral_sum += 2*acc - mHat(0,k)*pHatTable2[d*j+k](l,0)-mHat(M-1,k)*pHatTable2[j*d+k](l,M-1);
+                    }
+                }
+                PiMinusJ(l) = fHatTable(l, j) - (integral_sum * dx) / (2*pHatTable(l, j));
+            }
+            // calculate norm of Pi minus j
+            Vector integrand = PiMinusJ.array().square()*pHatTable.col(j).array();
+            double Pi_minus_j_norm = trapz(integrand, dx);
+            double normalizingConst = std::max(0.0,1-lmbda/Pi_minus_j_norm);
+            mHat.col(j) = normalizingConst*PiMinusJ;
+        }
+        if (checkConv(mHat, mOld)){
+            break;
+        }
+    }
+}
+
+AddFunction SBFLasso(Vector &Y, Matrix &X, double lmbda){
+    // Initialize parameters. M is number of gridpoints.
+    size_t M = 100;
+    size_t n = X.rows();
+    size_t maxIter = 20;
+    size_t d = X.cols();
+
+    double yMean = Y.mean();
+    Vector yCentered = Y.array()-yMean;
+    Vector xGrid = Vector::LinSpaced(M, 0, 1);
+    Vector xMinValues = X.colwise().minCoeff();
+    Vector xMaxValues = X.colwise().maxCoeff();
+    Matrix xTranslated = Matrix::Zero(n,d);
+    for (int j = 0; j < d; j++){
+        xTranslated.col(j) = (X.col(j).array() - xMinValues(j))/(xMaxValues(j)-xMinValues(j));
+    }
+
+    Matrix mHat = Matrix::Zero(M,d);
+    double dx = 1.0/(M-1.0);
+
+    Vector h = hInitialize(xTranslated);
+    std::vector<Matrix> khTable = generateKhTable(xGrid, xTranslated, h, dx);
+    Matrix pHatTable = generatePHatTable(khTable);
+    std::vector<Matrix> pHatTable2 = generatePHatTable2(khTable);
+    Matrix fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
+    // Optimization loop
+    optLoopLasso(mHat,pHatTable,pHatTable2,fHatTable,dx,lmbda,maxIter,d,M);
+
+    std::cout << mHat << "\n";
+
+    Matrix fin_x_grid = createGrid(xMinValues, xMaxValues, M);
+    AddFunction output = AddFunction(fin_x_grid,mHat, yMean);
+    return output;
+};
+
+std::vector<double> geomspace(double start, double end, size_t num) {
+    std::vector<double> result;
+    double factor = std::pow(end / start, 1.0 / (num - 1));
+    for (int i = 0; i < num; ++i) {
+        result.push_back(start * std::pow(factor, i));
+    }
+    return result;
+}
+
+double lmbdaCritCalc(Matrix& mHat,Vector& yCentered, Matrix& pHatTable,Matrix& fHatTable, Vector& h, double dx, size_t d, size_t n){
+    double mHatIntegralSum = 0;
+    for (int j=0; j< d; j++){
+        Vector integrand = mHat.col(j).array().square()*pHatTable.col(j).array();
+        mHatIntegralSum += trapz(integrand,dx);
+    }
+    double yTerm = yCentered.array().square().mean();
+    double crossTerm = 0;
+    for (int j = 0; j < d; j++){
+        Vector integrand = fHatTable.col(j).array() * pHatTable.col(j).array() * mHat.col(j).array();
+        crossTerm += trapz(integrand,dx);
+    }
+    double firstTerm = std::log(0.5*(yTerm + mHatIntegralSum -2*crossTerm));
+
+    double secondTerm = 0;
+    for (int j = 0; j < d; j++){
+        // Check if component j is picked
+        if (mHat.col(j).squaredNorm() > 0.001){
+            auto n2 = static_cast<double>(n);
+            secondTerm += std::log(n2*h(j))/(n2*h(j));
+        }
+    }
+    return firstTerm + secondTerm;
+}
+
+AddFunction SBFLassoAutomatic(Vector &Y, Matrix &X){
+    // Initialize parameters. M is number of gridpoints.
+    size_t M = 100;
+    size_t n = X.rows();
+    size_t maxIter = 20;
+    size_t d = X.cols();
+
+    double yMean = Y.mean();
+    Vector yCentered = Y.array()-yMean;
+    Vector xGrid = Vector::LinSpaced(M, 0, 1);
+    Vector xMinValues = X.colwise().minCoeff();
+    Vector xMaxValues = X.colwise().maxCoeff();
+    Matrix xTranslated = Matrix::Zero(n,d);
+    for (int j = 0; j < d; j++){
+        xTranslated.col(j) = (X.col(j).array() - xMinValues(j))/(xMaxValues(j)-xMinValues(j));
+    }
+
+
+    double dx = 1.0/(M-1.0);
+
+    Vector h = hInitialize(xTranslated);
+    std::vector<Matrix> khTable = generateKhTable(xGrid, xTranslated, h, dx);
+    Matrix pHatTable = generatePHatTable(khTable);
+    std::vector<Matrix> pHatTable2 = generatePHatTable2(khTable);
+    Matrix fHatTable = generateFHatTable(yCentered,khTable,pHatTable);
+    // Optimization loop
+
+    size_t noOfGridpoints = 50;
+    std::vector<double> lmbdaGrid = geomspace(0.01,2,noOfGridpoints);
+    std::vector<double> scoreVector;
+    for (auto & lmbda : lmbdaGrid) {
+        Matrix mHat = Matrix::Zero(M,d);
+        optLoopLasso(mHat,pHatTable,pHatTable2,fHatTable,dx,lmbda,maxIter,d,M);
+        double lmbdaCrit = lmbdaCritCalc(mHat,yCentered,pHatTable,fHatTable,h,dx,d,n);
+        scoreVector.push_back(lmbdaCrit);
+    }
+    // Find the iterator to the minimum element in the score vector
+    auto minIterator = std::min_element(scoreVector.begin(), scoreVector.end());
+    int min_index = std::distance(scoreVector.begin(), minIterator);
+
+    // Use this index to get the corresponding value from lambda_grid
+    double bestLmbda = lmbdaGrid[min_index];
+    Matrix mHat = Matrix::Zero(M,d);
+    optLoopLasso(mHat,pHatTable,pHatTable2,fHatTable,dx,bestLmbda,maxIter,d,M);
+
+    Matrix fin_x_grid = createGrid(xMinValues, xMaxValues, M);
+    AddFunction output = AddFunction(fin_x_grid,mHat, yMean);
     return output;
 };
 
@@ -231,17 +352,22 @@ void sbfWrapper(double* yPtr, double* xPtr, double* outputPtr, int n, int d){
     Vector yVector = yVectorMap;
     Matrix xMatrix = xMatrixMap;
 
-    //std::cout << "This is Y: \n" << yVector<< "\n";
-    //std::cout << "This is X: \n" << xMatrix << "\n";
-
     AddFunction output = SBF(yVector, xMatrix);
-
-    //std::cout << "This is the output:\n" << output.predict(xMatrix) << "\n";
 
     Vector fittedValues = output.predict(xMatrix);
 
+    std::copy(fittedValues.data(), fittedValues.data() + fittedValues.size(), outputPtr);
+};
 
-    //outputPtr = fittedValues.data();
+void sbfLassoWrapper(double* yPtr, double* xPtr, double* outputPtr, double lmbda, int n, int d){
+    Eigen::Map<Eigen::Vector<double, Eigen::Dynamic>> yVectorMap(yPtr, n);
+    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> xMatrixMap(xPtr, n, d);
+    Vector yVector = yVectorMap;
+    Matrix xMatrix = xMatrixMap;
+    AddFunction output = SBFLasso(yVector, xMatrix, lmbda);
+
+    Vector fittedValues = output.predict(xMatrix);
+
     std::copy(fittedValues.data(), fittedValues.data() + fittedValues.size(), outputPtr);
 };
 

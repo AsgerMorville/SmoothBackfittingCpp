@@ -11,5 +11,6 @@ int main(){
     Vector Y = Vector::Random(n);
 
     AddFunction add_func_test = SBF(Y,X);
+
     return 0;
 };

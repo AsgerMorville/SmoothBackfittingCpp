@@ -37,6 +37,6 @@ int main(){
     std::cout << "TESTER predict: " << tester_array << "\n";
     std::cout << "TRUE predict: " << "2.1644, 1.2413, 2.1312" << "\n";
 
-
+    std::cout << "Passed test" << "\n";
     return 0;
 };

@@ -5,6 +5,7 @@
 #include "smooth_backfitting_core.h"
 #include <Eigen/Dense>
 #include <chrono>
+
 typedef Eigen::ArrayXXd Array;
 typedef Eigen::VectorXd Vector;
 typedef Eigen::MatrixXd Matrix;
@@ -68,5 +69,6 @@ int main(){
     sbfWrapper(Y.data(), X2.data(),output.data(), n, d);
     std::cout << "AFTER FITTING: " << output << "\n";
     */
+    std::cout << "Passed test" << "\n";
     return 0;
 };

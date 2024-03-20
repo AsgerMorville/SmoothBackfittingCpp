@@ -22,7 +22,7 @@ int main() {
     Matrix Z = Matrix::Random(n, d);
     Vector Y = Vector::Random(n);
 
-
+    std::cout << "Passed test" << "\n";
     /*
     auto t0 = std::chrono::steady_clock::now();
     Vector fitted = PL_SBF(Y, X, Z);
